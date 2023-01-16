@@ -21,47 +21,58 @@ def get_user(user_id: int):
             "status": 404
         }
     db_session = SessionLocal()
-    result = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
-    if not result:
+    try:
+        result = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
+        if not result:
+            return {
+                "message": "no user found",
+                "data": {},
+                "status": 404
+            }
         return {
-            "message": "no user found",
-            "data": {},
-            "status": 404
+            "data": result
         }
-    return {
-        "data": result
-    }
+    except Exception as e:
+        return {e}
+    finally:
+        db_session.close()
 
 
 @app.post("/user")
 async def create_user(request: Request):
     payload = await request.json()
+    db_session = SessionLocal()
     if not payload:
         return{
             "message": "invalid payload",
             "data": {},
             "status": 404
         }
-    db_session = SessionLocal()
-    email = payload["email"]
-    password = payload["password"]
-    first_name = payload["first_name"]
-    last_name = payload["last_name"]
+    try:
 
-    user_model = models.UserModel(email=email, hashed_password=password, first_name=first_name, last_name=last_name)
-    db_session.add(user_model)
-    db_session.commit()
-    db_session.refresh(user_model)
-    db_session.close()
+        email = payload["email"]
+        password = payload["password"]
+        first_name = payload["first_name"]
+        last_name = payload["last_name"]
 
-    return {
-        "data": user_model
-    }
+        user_model = models.UserModel(email=email, hashed_password=password, first_name=first_name, last_name=last_name)
+        db_session.add(user_model)
+        db_session.commit()
+        db_session.refresh(user_model)
+
+        return {
+            "data": user_model
+        }
+    except Exception as e:
+        return{e}
+    finally:
+        db_session.close()
 
 
 @app.post("/loans/")
 async def create_loan(request: Request):
     error_message = "invalid payload"
+    db_session = SessionLocal()
     try:
         payload = await request.json()
         if not payload or not payload["loan_detail"] or not payload["user_detail"]:
@@ -81,7 +92,7 @@ async def create_loan(request: Request):
         user_ids = user_detail["user_ids"]
         owner = user_detail["owner"]
 
-        db_session = SessionLocal()
+
         loan_model = models.LoanModel(amount=loan_amount, interest=loan_interest, term_months=loan_months, owner=owner)
         db_session.add(loan_model)
         db_session.commit()
@@ -102,26 +113,33 @@ async def create_loan(request: Request):
         }
     except Exception as e:
         return {e}
+    finally:
+        db_session.close()
 
 @app.get("/loans/{loan_id}")
 def get_loan(loan_id: int):
+    db_session = SessionLocal()
     if not loan_id:
         return {
             "message": "no loan id passed",
             "data": {},
             "status": 404
         }
-    db_session = SessionLocal()
-    result = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
-    if not result:
+    try:
+        result = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
+        if not result:
+            return {
+                "message": "no loan found",
+                "data": {},
+                "status": 404
+            }
         return {
-            "message": "no loan found",
-            "data": {},
-            "status": 404
+            "data": result
         }
-    return {
-        "data": result
-    }
+    except Exception as e:
+        return {e}
+    finally:
+        db_session.close()
 
 @app.get("/loans/user/{user_id}")
 def get_user_loans(user_id: int):
@@ -139,15 +157,48 @@ def get_user_loans(user_id: int):
     db_session = SessionLocal()
     try:
         user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
-
         res_arr = user_obj.loans
         return {
             "loans": res_arr
         }
+
     except Exception as e:
         return {e}
+    finally:
+        db_session.close()
 
+@app.post("/loans/share")
+async def share_loan(request: Request):
+    """
+    shares an existing loan from the given loan id with the user id in the payload
+    {
+        "loan_id": 1
+        "user_id": 2
+    }
+    :param request:
+    :return:
+    """
+    db_session = SessionLocal()
+    try:
+        payload = await request.json()
+        user_id = payload['user_id']
+        loan_id = payload['loan_id']
+        user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
+        loan_obj = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
+        user_obj.loans.append(loan_obj)
 
+        return {
+            "message": "loan shared",
+            "data": {
+                "loan_id": loan_obj.id
+            },
+            "status": 200
+        }
+
+    except Exception as e:
+        return {e}
+    finally:
+        db_session.close()
 
 @app.get("/loans/summary/{loan_id}")
 def get_loan_summary(loan_id: int):
