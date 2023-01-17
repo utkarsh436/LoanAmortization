@@ -203,7 +203,9 @@ def get_loan(loan_id: int):
                 "status": 404
             }
         return {
-            "data": result
+            "message": "loan found",
+            "data": result,
+            "status": 200
         }
     except Exception as e:
         return {e}
