@@ -26,8 +26,8 @@ class LoanModel(Base):
     __tablename__ = "loans"
 
     id = Column(Integer, primary_key=True, index=True)
-    amount = Column(String)
-    term_months = Column(String)
+    amount = Column(Float)
+    term_months = Column(Integer)
     owner = Column(Integer)
     interest = Column(Float)
 
