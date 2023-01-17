@@ -183,6 +183,12 @@ async def share_loan(request: Request):
         payload = await request.json()
         user_id = payload['user_id']
         loan_id = payload['loan_id']
+        if not user_id or not loan_id:
+            return{
+                "message": "invalid payload",
+                "data": {},
+                "status": 400
+            }
         user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
         loan_obj = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
         user_obj.loans.append(loan_obj)
@@ -200,6 +206,10 @@ async def share_loan(request: Request):
     finally:
         db_session.close()
 
-@app.get("/loans/summary/{loan_id}")
-def get_loan_summary(loan_id: int):
+
+@app.get("/loans/schedule/{loan_id}")
+def get_loan_schedule(loan_id: int):
+    return{}
+@app.get("/loans/summary/{loan_id}/month/{month_val}")
+def get_loan_summary(loan_id: int, month_val: int):
     return{}
