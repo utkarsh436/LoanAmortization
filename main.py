@@ -122,6 +122,35 @@ async def create_user(request: Request):
 
 @app.post("/loans/")
 async def create_loan(request: Request):
+    """
+    creates a loan object based on payload and existing users
+    sample payload:
+            "loan_detail": {
+                "amount": 250000,
+                "interest": 4.5,
+                "months": 360
+            },
+            "user_detail": {
+                "user_ids": [1,2],
+                "owner" : 1
+            }
+        }
+
+    :param request:
+    :return: {
+    "message": "loan created",
+    "data": {
+        "id": 8,
+        "amount": 250000.0,
+        "interest": 4.5,
+        "term_months": 360,
+        "owner": 1
+    },
+    "status": 200
+}
+    """
+
+
     error_message = "invalid payload"
     db_session = SessionLocal()
     try:
@@ -187,6 +216,21 @@ async def create_loan(request: Request):
 
 @app.get("/loans/{loan_id}")
 def get_loan(loan_id: int):
+    """
+    retrieves a loan object for a specified loan id
+    :param loan_id:
+    :return: {
+    "message": "loan found",
+    "data": {
+        "id": 7,
+        "term_months": 360,
+        "interest": 4.5,
+        "owner": 1,
+        "amount": 430000.0
+    },
+    "status": 200
+}
+    """
     db_session = SessionLocal()
     if not loan_id:
         return {
@@ -227,11 +271,16 @@ def get_user_loans(user_id: int):
             "status": 404
         }
     db_session = SessionLocal()
+    message = "no loans found"
     try:
         user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
         res_arr = user_obj.loans
+        if res_arr:
+            message = "loans found"
         return {
-            "loans": res_arr
+            "message": message,
+            "loans": res_arr,
+            "status": 200
         }
 
     except Exception as e:
@@ -283,17 +332,33 @@ async def share_loan(request: Request):
 @app.get("/loans/schedule/{loan_id}")
 def get_loan_schedule(loan_id: int):
     """
-    {
-        month: 1
-        remaining_balance: 200000
-        monthly_payment:
-        ]
-
-    }
-
+    builds the loan amortization schedule month by month
 
     :param loan_id:
     :return:
+    {
+    "message": "monthly loan amortization schedule created"
+    "data": [
+        {
+            "Month": 1,
+            "interest": 937.5,
+            "Remaining_balance": 249670.79,
+            "Monthly_payment": 1266.71
+        },
+        {
+            "Month": 2,
+            "interest": 936.26,
+            "Remaining_balance": 249340.34,
+            "Monthly_payment": 1266.71
+        },
+        {
+            "Month": 3,
+            "interest": 935.02,
+            "Remaining_balance": 249008.65,
+            "Monthly_payment": 1266.71
+        },.....,
+        "status": 200
+    }
     """
     if not loan_id:
         return {
@@ -335,6 +400,7 @@ def get_loan_schedule(loan_id: int):
             principal_cents = remaining_balance_cents
 
         return {
+            "message": "monthly loan amortization schedule created",
             "data": result_list,
             "status": 200
         }
@@ -346,9 +412,29 @@ def get_loan_schedule(loan_id: int):
 
 @app.get("/loans/summary/{loan_id}/month/{month_val}")
 def get_loan_summary(loan_id: int, month_val: int):
+    """
+    creates a loan summary up to the specified month not inclusive
+    :param loan_id:
+    :param month_val:
+    :return: {
+    "data": {
+        "Current_Principal": 246992.25,
+        "Aggregate Amount of interest paid": 8392.64,
+        "Aggregate AMount of principal paid": 3007.75
+    },
+    "status": 200
+}
+    """
+
     if not loan_id or not month_val:
         return {
             "message": "invalid request",
+            "data": {},
+            "status": 400
+        }
+    if month_val > 360:
+        return {
+            "message": "invalid month please send a month value <= 360",
             "data": {},
             "status": 400
         }
@@ -382,6 +468,7 @@ def get_loan_summary(loan_id: int, month_val: int):
         aggregate_amount_principal_paid = ((amount * 100) - principal_cents) / 100.00
 
         return {
+            "message": "summary calculated",
             "data": {
                 "Current_Principal": principal_cents / 100.00,
                 "Aggregate Amount of interest paid": aggregate_amount_interest_paid / 100.00,
