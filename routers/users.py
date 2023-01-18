@@ -16,7 +16,6 @@ async def create_user(request: Request):
         "email": "foo@gmail.com",
         "first_name": "foo",
         "last_name": "bar",
-        "password": "password"
     }
     :param request:
     :return: {
@@ -39,11 +38,10 @@ async def create_user(request: Request):
         }
     try:
         email = payload.get("email")
-        password = payload.get("password")
         first_name = payload.get("first_name")
         last_name = payload.get("last_name")
 
-        if not email or not password or not first_name or not last_name:
+        if not email or not first_name or not last_name:
             raise Exception("missing parameters")
         if not check_email(email):
             raise Exception("invalid email address")
@@ -59,7 +57,7 @@ async def create_user(request: Request):
                 "status": 400
             }
 
-        user_model = models.UserModel(email=email, hashed_password=password, first_name=first_name, last_name=last_name)
+        user_model = models.UserModel(email=email, first_name=first_name, last_name=last_name)
         db_session.add(user_model)
         db_session.commit()
         db_session.refresh(user_model)

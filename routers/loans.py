@@ -125,6 +125,7 @@ async def get_loan(loan_id: int):
         }
     try:
         result = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
+        result.users
         if not result:
             return {
                 "message": "no loan found",
@@ -133,7 +134,9 @@ async def get_loan(loan_id: int):
             }
         return {
             "message": "loan found",
-            "data": result,
+            "data": {
+                "loan_details": result
+            },
             "status": 200
         }
     except Exception as e:
@@ -353,7 +356,7 @@ def get_loan_summary(loan_id: int, month_val: int):
         principal_cents = int(amount * 100)
 
         aggregate_amount_interest_paid = 0
-        for month in range(1, month_val):
+        for month in range(1, month_val+1):
             monthly_interest_amount_cents = int(monthly_interest_rate * principal_cents)
             aggregate_amount_interest_paid += monthly_interest_amount_cents
             total_cents = principal_cents + monthly_interest_amount_cents
@@ -365,7 +368,7 @@ def get_loan_summary(loan_id: int, month_val: int):
         aggregate_amount_principal_paid = ((amount * 100) - principal_cents) / 100.00
 
         return {
-            "message": "summary calculated",
+            "message": "summary as of end of month " + str(month_val),
             "data": {
                 "Current_Principal": principal_cents / 100.00,
                 "Aggregate Amount of interest paid": aggregate_amount_interest_paid / 100.00,
