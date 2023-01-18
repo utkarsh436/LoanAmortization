@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Request
 
-import math
 import models
 from DataService.data_service import DataService
 from database import SessionLocal

@@ -1,5 +1,3 @@
-import math
-
 import models
 
 from database import SessionLocal
@@ -7,11 +5,20 @@ from utils import calculate_emi
 
 
 class DataService:
-
+    """
+    provides separate methods to access the database to retrieve data
+    """
     def __init__(self, model):
         self._model = model
 
     def write_user(self, email, first_name, last_name):
+        """
+        creates a new user entry into users table after validating user does not already exist based on email
+        :param email:
+        :param first_name:
+        :param last_name:
+        :return:
+        """
         db_session = SessionLocal()
 
         try:
@@ -44,6 +51,11 @@ class DataService:
             db_session.close()
 
     def get_user(self, user_id):
+        """
+        retrieves a specific user based on user_id
+        :param user_id:
+        :return:
+        """
         db_session = SessionLocal()
         try:
             result = db_session.query(self._model).filter(self._model.id == user_id).first()
@@ -64,6 +76,10 @@ class DataService:
             db_session.close()
 
     def get_all_users(self):
+        """
+        retrieves all users within the db
+        :return:
+        """
         db_session = SessionLocal()
         try:
             result = db_session.query(self._model).all()
@@ -84,6 +100,15 @@ class DataService:
             db_session.close()
 
     def create_loan(self, user_ids, loan_amount, loan_interest, loan_months, owner_user_id):
+        """
+        creates a loan entry in the loan table with the given params
+        :param user_ids:
+        :param loan_amount:
+        :param loan_interest:
+        :param loan_months:
+        :param owner_user_id:
+        :return:
+        """
         db_session = SessionLocal()
         try:
             loan_model = self._model(amount=loan_amount, interest=loan_interest, term_months=loan_months,
@@ -119,6 +144,11 @@ class DataService:
             db_session.close()
 
     def get_loan(self, loan_id):
+        """
+        gets a single loan object based on loan id from the database
+        :param loan_id:
+        :return:
+        """
         db_session = SessionLocal()
         try:
             result = db_session.query(self._model).filter(self._model.id == loan_id).first()
@@ -142,6 +172,11 @@ class DataService:
             db_session.close()
 
     def get_user_loans(self, user_id):
+        """
+        gets all loans associated to a user
+        :param user_id:
+        :return:
+        """
         db_session = SessionLocal()
         message = "no loans found"
         try:
@@ -161,6 +196,12 @@ class DataService:
             db_session.close()
 
     def share_loan(self, user_id, loan_id):
+        """
+        shares the loan for a specified user and loan by creating an association between them
+        :param user_id:
+        :param loan_id:
+        :return:
+        """
         db_session = SessionLocal()
         try:
             loan_obj = db_session.query(self._model).filter(self._model.id == loan_id).first()
@@ -195,6 +236,11 @@ class DataService:
             db_session.close()
 
     def get_loan_schedule(self, loan_id):
+        """
+        retriences the loan object if it exists and creates a amortization schedule
+        :param loan_id:
+        :return:
+        """
         db_session = SessionLocal()
         try:
             loan_obj = db_session.query(self._model).filter(self._model.id == loan_id).first()
@@ -244,6 +290,12 @@ class DataService:
             db_session.close()
 
     def get_loan_summary(self, loan_id, month_val):
+        """
+         calculates the end of month loan summary for an existing loan
+        :param loan_id:
+        :param month_val:
+        :return:
+        """
 
         db_session = SessionLocal()
         try:

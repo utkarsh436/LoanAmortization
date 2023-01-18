@@ -33,6 +33,13 @@ def check_loan_details(loan_amount, loan_interest, loan_months):
 
 
 def calculate_emi(amount, term_months, interest):
+    """
+    calculates the emi or monthly payment
+    :param amount:
+    :param term_months:
+    :param interest:
+    :return:
+    """
     monthly_interest_rate = (interest / 100) / 12
     numerator = monthly_interest_rate * math.pow((1 + monthly_interest_rate), term_months)
     denominator = ((math.pow(1 + monthly_interest_rate, term_months)) - 1)
@@ -47,7 +54,7 @@ def calculate_emi(amount, term_months, interest):
 
 def check_user_details(user_ids, owner_user_id):
     """
-    validate user details
+    validate user details and validates user exists
     :param user_ids: []
     :param owner_user_id: owners user id
     :return: boolean
