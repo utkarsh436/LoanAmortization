@@ -1,10 +1,24 @@
 from fastapi import APIRouter, Request
 
 import models
+from DataService.data_service import DataService
 from database import SessionLocal
 from utils import check_email
 
 router = APIRouter(prefix="/users")
+
+@router.get("/")
+async def get_all_users():
+    """
+    gets all users in the database
+    :return:
+    """
+    try:
+        data_service = DataService(models.UserModel)
+        result = data_service.get_all_users()
+        return result
+    except Exception as e:
+        return {e}
 
 @router.post("/")
 async def create_user(request: Request):
@@ -29,7 +43,6 @@ async def create_user(request: Request):
         }
     """
     payload = await request.json()
-    db_session = SessionLocal()
     if not payload:
         return {
             "message": "invalid payload",
@@ -46,33 +59,12 @@ async def create_user(request: Request):
         if not check_email(email):
             raise Exception("invalid email address")
 
-        # check if user already exists if so then return user object
-        user_obj = db_session.query(models.UserModel).filter(models.UserModel.email == email).first()
-        if user_obj:
-            return {
-                "message": "user already exists",
-                "data": {
-                    user_obj
-                },
-                "status": 400
-            }
+        data_service = DataService(models.UserModel)
+        result = data_service.write_user(email=email, first_name=first_name, last_name=last_name)
 
-        user_model = models.UserModel(email=email, first_name=first_name, last_name=last_name)
-        db_session.add(user_model)
-        db_session.commit()
-        db_session.refresh(user_model)
-
-        return {
-            "data": user_model
-        }
+        return result
     except Exception as e:
-        return {
-            "message": str(e),
-            "data": {},
-            "status": 400
-        }
-    finally:
-        db_session.close()
+        return e
 @router.get("/{user_id}")
 async def get_user(user_id: int):
     """
@@ -86,21 +78,10 @@ async def get_user(user_id: int):
             "data": {},
             "status": 404
         }
-    db_session = SessionLocal()
+
     try:
-        result = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
-        if not result:
-            return {
-                "message": "no user found",
-                "data": {},
-                "status": 404
-            }
-        return {
-            "message": "user found",
-            "data": {result},
-            "status": 200
-        }
+        data_service = DataService(models.UserModel)
+        result = data_service.get_user(user_id=user_id)
+        return result
     except Exception as e:
         return {e}
-    finally:
-        db_session.close()
