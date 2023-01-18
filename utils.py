@@ -1,3 +1,4 @@
+import math
 import re
 import models
 
@@ -31,20 +32,34 @@ def check_loan_details(loan_amount, loan_interest, loan_months):
     return True
 
 
-def check_user_details(user_ids, owner, db_session):
+def calculate_emi(amount, term_months, interest):
+    monthly_interest_rate = (interest / 100) / 12
+    numerator = monthly_interest_rate * math.pow((1 + monthly_interest_rate), term_months)
+    denominator = ((math.pow(1 + monthly_interest_rate, term_months)) - 1)
+
+    EMI_raw = amount * (numerator / denominator)
+    result = {
+        "EMI_raw": EMI_raw,
+        "monthly_interest_rate": monthly_interest_rate
+    }
+    return result
+
+
+def check_user_details(user_ids, owner_user_id):
     """
     validate user details
     :param user_ids: []
-    :param owner: user id
-    :param db_session: SessionLocal()
+    :param owner_user_id: owners user id
     :return: boolean
     """
-    if not isinstance(owner, int):
+    from DataService.data_service import DataService
+    data_service = DataService(models.UserModel)
+    if not isinstance(owner_user_id, int):
         return False
     for id in user_ids:
         if not isinstance(id, int):
             return False
-        user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == id).first()
+        user_obj = data_service.get_user(id)
         if not user_obj:
             return False
     return True

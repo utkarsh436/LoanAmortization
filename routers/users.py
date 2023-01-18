@@ -2,7 +2,6 @@ from fastapi import APIRouter, Request
 
 import models
 from DataService.data_service import DataService
-from database import SessionLocal
 from utils import check_email
 
 router = APIRouter(prefix="/users")
@@ -85,3 +84,24 @@ async def get_user(user_id: int):
         return result
     except Exception as e:
         return {e}
+
+@router.get("/{user_id}/loans")
+def get_user_loans(user_id: int):
+    """
+    gets all loan objects for a user
+    :param user_id:
+    :return: array of loan objects associated to user
+    """
+    if not user_id:
+        return {
+            "message": "no user id passed",
+            "data": {},
+            "status": 400
+        }
+    try:
+        data_service = DataService(models.UserModel)
+        result = data_service.get_user_loans(user_id)
+        return result
+    except Exception as e:
+        return {e}
+

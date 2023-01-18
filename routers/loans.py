@@ -2,10 +2,12 @@ from fastapi import APIRouter, Request
 
 import math
 import models
+from DataService.data_service import DataService
 from database import SessionLocal
 from utils import check_loan_details, check_user_details
 
 router = APIRouter(prefix="/loans")
+
 
 @router.post("/")
 async def create_loan(request: Request):
@@ -37,9 +39,7 @@ async def create_loan(request: Request):
 }
     """
 
-
     error_message = "invalid payload"
-    db_session = SessionLocal()
     try:
         payload = await request.json()
         if not payload or not payload.get("loan_detail") or not payload.get("user_detail"):
@@ -62,61 +62,55 @@ async def create_loan(request: Request):
             raise Exception("invalid loan details")
 
         user_ids = user_detail.get("user_ids")
-        owner = user_detail.get("owner")
+        owner_user_id = user_detail.get("owner_user_id")
 
-        if not user_ids or len(user_ids) == 0 or not owner:
+        if not user_ids or len(user_ids) == 0 or not owner_user_id:
             raise Exception("missing user id details")
-        if not check_user_details(user_ids, owner, db_session):
+        if not check_user_details(user_ids, owner_user_id):
             raise Exception("invalid used detail")
 
-        loan_model = models.LoanModel(amount=loan_amount, interest=loan_interest, term_months=loan_months, owner=owner)
-        db_session.add(loan_model)
-        db_session.commit()
-        db_session.refresh(loan_model)
+        loan_data_service = DataService(models.LoanModel)
+        result = loan_data_service.create_loan(user_ids=user_ids, loan_amount=loan_amount, loan_interest=loan_interest,
+                                               loan_months=loan_months, owner_user_id=owner_user_id)
+        return result
 
-        for id in user_ids:
-            user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == id).first()
-            if user_obj:
-                user_obj.loans.append(loan_model)
-                db_session.commit()
-
-        return {
-            "message": "loan created",
-            "data": {
-                "id": loan_model.id,
-                "amount": loan_model.amount,
-                "interest": loan_model.interest,
-                "term_months": loan_model.term_months,
-                "owner": loan_model.owner
-            },
-            "status": 200
-        }
     except Exception as e:
-        return {
-            "message": str(e),
-            "data": {},
-            "status": 400
-        }
-    finally:
-        db_session.close()
+        return e
+
+
 @router.get("/{loan_id}")
 async def get_loan(loan_id: int):
     """
     retrieves a loan object for a specified loan id
     :param loan_id:
-    :return: {
+    :return:
     "message": "loan found",
     "data": {
-        "id": 7,
-        "term_months": 360,
-        "interest": 4.5,
-        "owner": 1,
-        "amount": 430000.0
+        "loan_details": {
+            "amount": 450000.0,
+            "owner_user_id": 1,
+            "id": 1,
+            "term_months": 360,
+            "interest": 4.5,
+            "users": [
+                {
+                    "last_name": "bar1",
+                    "email": "abc@gmail.com",
+                    "first_name": "foo1",
+                    "id": 1
+                },
+                {
+                    "last_name": "bar2",
+                    "email": "def@gmail.com",
+                    "first_name": "foo2",
+                    "id": 2
+                }
+            ]
+        }
     },
     "status": 200
 }
     """
-    db_session = SessionLocal()
     if not loan_id:
         return {
             "message": "no loan id passed",
@@ -124,57 +118,12 @@ async def get_loan(loan_id: int):
             "status": 400
         }
     try:
-        result = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
-        result.users
-        if not result:
-            return {
-                "message": "no loan found",
-                "data": {},
-                "status": 400
-            }
-        return {
-            "message": "loan found",
-            "data": {
-                "loan_details": result
-            },
-            "status": 200
-        }
+
+        data_service = DataService(models.LoanModel)
+        result = data_service.get_loan(loan_id)
+        return result
     except Exception as e:
         return {e}
-    finally:
-        db_session.close()
-
-@router.get("/user/{user_id}")
-def get_user_loans(user_id: int):
-    """
-    gets all loan objects for a user
-    :param user_id:
-    :return: array of loan objects associated to user
-    """
-    if not user_id:
-        return {
-            "message": "no user id passed",
-            "data": {},
-            "status": 400
-        }
-    db_session = SessionLocal()
-    message = "no loans found"
-    try:
-        user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
-        res_arr = user_obj.loans
-        if res_arr:
-            message = "loans found"
-        return {
-            "message": message,
-            "loans": res_arr,
-            "status": 200
-        }
-
-    except Exception as e:
-        return {e}
-    finally:
-        db_session.close()
-
 
 @router.post("/share")
 async def share_loan(request: Request):
@@ -187,48 +136,22 @@ async def share_loan(request: Request):
     :param request:
     :return:
     """
-    db_session = SessionLocal()
     try:
         payload = await request.json()
-        user_id = payload['user_id']
-        loan_id = payload['loan_id']
+        user_id = payload.get('user_id')
+        loan_id = payload.get('loan_id')
         if not user_id or not loan_id:
             return {
                 "message": "invalid payload",
                 "data": {},
                 "status": 400
             }
-        user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
-        loan_obj = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
-
-        if not user_obj:
-            return {
-                "message": "user not found",
-                "data": {},
-                "status": 400
-            }
-        if not loan_obj:
-            return {
-                "message": "loan not found",
-                "data": {},
-                "status": 400
-            }
-
-        user_obj.loans.append(loan_obj)
-
-        return {
-            "message": "loan shared",
-            "data": {
-                "loan_id": loan_obj.id
-            },
-            "status": 200
-        }
+        data_service = DataService(models.LoanModel)
+        result = data_service.share_loan(user_id=user_id, loan_id=loan_id)
+        return result
 
     except Exception as e:
         return {e}
-    finally:
-        db_session.close()
-
 
 @router.get("/schedule/{loan_id}")
 def get_loan_schedule(loan_id: int):
@@ -267,48 +190,14 @@ def get_loan_schedule(loan_id: int):
             "data": {},
             "status": 400
         }
-    db_session = SessionLocal()
     try:
-        loan_obj = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
-        amount = loan_obj.amount
-        term_months = loan_obj.term_months
-        interest = loan_obj.interest
 
-        monthly_interest_rate = (interest / 100) / 12
-        numerator = monthly_interest_rate * math.pow((1 + monthly_interest_rate), term_months)
-        denominator = ((math.pow(1 + monthly_interest_rate, term_months)) - 1)
-
-        EMI_raw = amount * (numerator / denominator)
-        rounded_EMI = round(EMI_raw, 2)
-        rounded_EMI_cents = int(rounded_EMI * 100)
-
-        principal_cents = int(amount * 100)
-        result_list = []
-        for month in range(1, term_months + 1):
-            monthly_interest_amount_cents = int(monthly_interest_rate * principal_cents)
-            total_cents = principal_cents + monthly_interest_amount_cents
-            remaining_balance_cents = total_cents - rounded_EMI_cents
-            if remaining_balance_cents < 0:
-                rounded_EMI = total_cents / 100.00
-                remaining_balance_cents = 0
-            monthly_object = {
-                "Month": month,
-                "Remaining_balance": remaining_balance_cents / 100.00,
-                "Monthly_payment": rounded_EMI
-            }
-            result_list.append(monthly_object)
-            principal_cents = remaining_balance_cents
-
-        return {
-            "message": "monthly loan amortization schedule created",
-            "data": result_list,
-            "status": 200
-        }
+        data_service = DataService(models.LoanModel)
+        result = data_service.get_loan_schedule(loan_id)
+        return result
 
     except Exception as e:
         return {e}
-    finally:
-        db_session.close()
 
 @router.get("/summary/{loan_id}/month/{month_val}")
 def get_loan_summary(loan_id: int, month_val: int):
@@ -340,42 +229,9 @@ def get_loan_summary(loan_id: int, month_val: int):
         }
     db_session = SessionLocal()
     try:
-        loan_obj = db_session.query(models.LoanModel).filter(models.LoanModel.id == loan_id).first()
-        term_months = loan_obj.term_months
-        amount = loan_obj.amount
-        interest = loan_obj.interest
-
-        monthly_interest_rate = (interest / 100) / 12
-        numerator = monthly_interest_rate * math.pow((1 + monthly_interest_rate), term_months)
-        denominator = ((math.pow(1 + monthly_interest_rate, term_months)) - 1)
-
-        EMI_raw = amount * (numerator / denominator)
-        rounded_EMI = round(EMI_raw, 2)
-        rounded_EMI_cents = int(rounded_EMI * 100)
-
-        principal_cents = int(amount * 100)
-
-        aggregate_amount_interest_paid = 0
-        for month in range(1, month_val+1):
-            monthly_interest_amount_cents = int(monthly_interest_rate * principal_cents)
-            aggregate_amount_interest_paid += monthly_interest_amount_cents
-            total_cents = principal_cents + monthly_interest_amount_cents
-            remaining_balance_cents = total_cents - rounded_EMI_cents
-            if remaining_balance_cents < 0:
-                rounded_EMI = total_cents / 100.00
-                remaining_balance_cents = 0
-            principal_cents = remaining_balance_cents
-        aggregate_amount_principal_paid = ((amount * 100) - principal_cents) / 100.00
-
-        return {
-            "message": "summary as of end of month " + str(month_val),
-            "data": {
-                "Current_Principal": principal_cents / 100.00,
-                "Aggregate Amount of interest paid": aggregate_amount_interest_paid / 100.00,
-                "Aggregate Amount of principal paid": aggregate_amount_principal_paid
-            },
-            "status": 200
-        }
+        data_service = DataService(models.LoanModel)
+        result = data_service.get_loan_summary(loan_id, month_val)
+        return result
 
     except Exception as e:
         return {e}

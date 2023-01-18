@@ -27,7 +27,7 @@ class LoanModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Float)
     term_months = Column(Integer)
-    owner = Column(Integer)
+    owner_user_id = Column(Integer)
     interest = Column(Float)
 
     users = relationship('UserModel', secondary=association_table, back_populates='loans')
