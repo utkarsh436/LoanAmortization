@@ -187,7 +187,7 @@ def get_loan_schedule(loan_id: int):
 @router.get("/summary/{loan_id}/month/{month_val}")
 def get_loan_summary(loan_id: int, month_val: int):
     """
-    creates a loan summary up to the specified month not inclusive
+    creates a loan summary up to the specified month
     :param loan_id:
     :param month_val:
     :return: {
