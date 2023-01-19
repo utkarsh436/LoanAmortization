@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException
+from typing import Union
 
 import models
 from DataService.data_service import DataService
@@ -7,14 +8,18 @@ from utils import check_email
 router = APIRouter(prefix="/users")
 
 @router.get("/")
-async def get_all_users():
+async def get_all_users(email: Union[str, None] = None):
     """
-    gets all users in the database
+    gets all users in the database or can get a single user by the email address
     :return:
     """
     try:
         data_service = DataService(models.UserModel)
-        result = data_service.get_all_users()
+        if email and check_email(email):
+            print(email)
+            result = data_service.get_user_by_email(email)
+        else:
+            result = data_service.get_all_users()
         return result
     except Exception as e:
         raise e
@@ -72,6 +77,21 @@ async def get_user(user_id: int):
     try:
         data_service = DataService(models.UserModel)
         result = data_service.get_user(user_id=user_id)
+        return result
+    except Exception as e:
+        raise e
+@router.get("/{user_email}")
+async def get_user_by_email(user_email: str):
+    """
+    Gets the user information for a specific user based on the id
+    :param user_id:
+    :return: user object
+    """
+    if not user_email:
+        raise HTTPException(status_code=400, detail="no user_email passed")
+    try:
+        data_service = DataService(models.UserModel)
+        result = data_service.get_user_by_email(user_email=user_email)
         return result
     except Exception as e:
         raise e

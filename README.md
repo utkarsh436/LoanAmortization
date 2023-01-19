@@ -2,7 +2,7 @@
 This is a FASTAPi application builds a loan amortization schedule for loans
 
 ## USER API's
-- GET /users : is a get all users 
+- GET /users : is a get all users can take an option paramter: ?email=foo@gmail.com to retrieve a user by the email address 
 - POST /users: creates a user object 
   ````
     Sample payload:
@@ -12,7 +12,7 @@ This is a FASTAPi application builds a loan amortization schedule for loans
                 "last_name": "bar",
             }
   ```` 
-- GET /users/{user_id}: retrieves user information for a specific user
+- GET /users/{user_id}: retrieves user information for a specific user based on the id 
 - GET /users/{user_id}/loans : retrieves all the loans associated to a user
 
 ## LOAN API's

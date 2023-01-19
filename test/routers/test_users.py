@@ -23,12 +23,21 @@ class UsersRoutesTests(unittest.TestCase):
         })
         assert response.json().get("message") == "user already exists"
 
-    def test_get_user_success(self):
+    def test_get_user_by_id_success(self):
         response, email = create_user_helper()
         assert response.json().get("data").get("email") == email
 
         id = response.json().get("data").get("id")
         url = """/users/{}""".format(id)
+        response = client.get(url)
+        assert response.json().get("message") == "user found"
+
+    def test_get_user_by_email_success(self):
+        response, email = create_user_helper()
+        assert response.json().get("data").get("email") == email
+
+        email = response.json().get("data").get("email")
+        url = """/users?email={}""".format(email)
         response = client.get(url)
         assert response.json().get("message") == "user found"
 

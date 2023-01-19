@@ -45,7 +45,7 @@ class DataService:
     def get_user(self, user_id):
         """
         retrieves a specific user based on user_id
-        :param user_id:
+        :param user_id: int
         :return:
         """
         db_session = SessionLocal()
@@ -53,6 +53,27 @@ class DataService:
             result = db_session.query(self._model).filter(self._model.id == user_id).first()
             if not result:
                 raise HTTPException(status_code=404, detail="no user object found for given user id")
+            return {
+                "message": "user found",
+                "data": {result},
+                "status": 200
+            }
+        except Exception as e:
+            raise e
+        finally:
+            db_session.close()
+
+    def get_user_by_email(self, user_email):
+        """
+        retrieves a specific user based on email address
+        :param user_email: str
+        :return:
+        """
+        db_session = SessionLocal()
+        try:
+            result = db_session.query(self._model).filter(self._model.email == user_email).first()
+            if not result:
+                raise HTTPException(status_code=404, detail="no user object found for given user_email")
             return {
                 "message": "user found",
                 "data": {result},
