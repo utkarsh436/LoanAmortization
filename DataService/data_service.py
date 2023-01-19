@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 import models
 
 from database import SessionLocal
@@ -8,6 +10,7 @@ class DataService:
     """
     provides separate methods to access the database to retrieve data
     """
+
     def __init__(self, model):
         self._model = model
 
@@ -25,14 +28,7 @@ class DataService:
             # check if user already exists if so then return user object
             user_obj = db_session.query(self._model).filter(self._model.email == email).first()
             if user_obj:
-                return {
-                    "message": "user already exists",
-                    "data": {
-                        user_obj
-                    },
-                    "status": 400
-                }
-
+                raise HTTPException(status_code=400, detail="user already exists")
             user_model = self._model(email=email, first_name=first_name, last_name=last_name)
             db_session.add(user_model)
             db_session.commit()
@@ -42,11 +38,7 @@ class DataService:
                 "data": user_model
             }
         except Exception as e:
-            return {
-                "message": str(e),
-                "data": {},
-                "status": 400
-            }
+            raise e
         finally:
             db_session.close()
 
@@ -60,18 +52,14 @@ class DataService:
         try:
             result = db_session.query(self._model).filter(self._model.id == user_id).first()
             if not result:
-                return {
-                    "message": "no user object found for given user id",
-                    "data": {},
-                    "status": 404
-                }
+                raise HTTPException(status_code=404, detail="no user object found for given user id")
             return {
                 "message": "user found",
                 "data": {result},
                 "status": 200
             }
         except Exception as e:
-            return {e}
+            raise e
         finally:
             db_session.close()
 
@@ -85,9 +73,9 @@ class DataService:
             result = db_session.query(self._model).all()
             if not result:
                 return {
-                    "message": "no user found",
+                    "message": "no users",
                     "data": {},
-                    "status": 404
+                    "status": 200
                 }
             return {
                 "message": "all users",
@@ -95,7 +83,7 @@ class DataService:
                 "status": 200
             }
         except Exception as e:
-            return {e}
+            raise e
         finally:
             db_session.close()
 
@@ -135,11 +123,7 @@ class DataService:
                 "status": 200
             }
         except Exception as e:
-            return {
-                "message": str(e),
-                "data": {},
-                "status": 400
-            }
+            raise e
         finally:
             db_session.close()
 
@@ -154,11 +138,7 @@ class DataService:
             result = db_session.query(self._model).filter(self._model.id == loan_id).first()
             result.users
             if not result:
-                return {
-                    "message": "no loan found",
-                    "data": {},
-                    "status": 400
-                }
+                raise HTTPException(status_code=400, detail="no loan found")
             return {
                 "message": "loan found",
                 "data": {
@@ -167,7 +147,7 @@ class DataService:
                 "status": 200
             }
         except Exception as e:
-            return {e}
+            raise e
         finally:
             db_session.close()
 
@@ -178,20 +158,21 @@ class DataService:
         :return:
         """
         db_session = SessionLocal()
-        message = "no loans found"
         try:
             user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
+            if not user_obj:
+                raise HTTPException(status_code=404, detail="no user object found for given user id")
             res_arr = user_obj.loans
             if res_arr:
-                message = "loans found"
-            return {
-                "message": message,
-                "loans": res_arr,
-                "status": 200
-            }
-
+                return {
+                    "message": "loans found",
+                    "loans": res_arr,
+                    "status": 200
+                }
+            else:
+                raise HTTPException(status_code=404, detail="no loans for given user_id")
         except Exception as e:
-            return {e}
+            raise e
         finally:
             db_session.close()
 
@@ -208,18 +189,9 @@ class DataService:
             user_obj = db_session.query(models.UserModel).filter(models.UserModel.id == user_id).first()
 
             if not user_obj:
-                return {
-                    "message": "user not found",
-                    "data": {},
-                    "status": 400
-                }
+                raise HTTPException(status_code=404, detail="user not found")
             if not loan_obj:
-                return {
-                    "message": "loan not found",
-                    "data": {},
-                    "status": 400
-                }
-
+                raise HTTPException(status_code=404, detail="loan not found")
             user_obj.loans.append(loan_obj)
 
             return {
@@ -231,7 +203,7 @@ class DataService:
             }
 
         except Exception as e:
-            return {e}
+            raise e
         finally:
             db_session.close()
 
@@ -245,11 +217,7 @@ class DataService:
         try:
             loan_obj = db_session.query(self._model).filter(self._model.id == loan_id).first()
             if not loan_obj:
-                return {
-                    "message": "loan does not exist",
-                    "data": {},
-                    "status": 400
-                }
+                raise HTTPException(status_code=404, detail="loan not found")
             amount = loan_obj.amount
             term_months = loan_obj.term_months
             interest = loan_obj.interest
@@ -285,7 +253,7 @@ class DataService:
             }
 
         except Exception as e:
-            return {e}
+            raise ev
         finally:
             db_session.close()
 
@@ -302,12 +270,7 @@ class DataService:
             loan_obj = db_session.query(self._model).filter(self._model.id == loan_id).first()
 
             if not loan_obj:
-                return {
-                    "message": "loan does not exist",
-                    "data": {},
-                    "status": 400
-                }
-
+                raise HTTPException(status_code=404, detail="loan not found")
             term_months = loan_obj.term_months
             amount = loan_obj.amount
             interest = loan_obj.interest
@@ -344,6 +307,6 @@ class DataService:
             }
 
         except Exception as e:
-            return {e}
+            raise e
         finally:
             db_session.close()

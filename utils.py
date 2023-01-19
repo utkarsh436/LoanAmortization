@@ -1,5 +1,8 @@
 import math
 import re
+
+from fastapi import HTTPException
+
 import models
 
 def check_email(email):
@@ -23,13 +26,11 @@ def check_loan_details(loan_amount, loan_interest, loan_months):
     loan months has to be an integer value and can not be greater than 360 months (30 years)
     """
     if not isinstance(loan_amount, int):
-        return False
+        raise HTTPException(status_code=400, detail="invalid loan_amount value")
     if not isinstance(loan_interest, float):
-        return False
+        raise HTTPException(status_code=400, detail="invalid loan_interest value")
     if not isinstance(loan_months, int) or loan_months > 360:
-        return False
-
-    return True
+        raise HTTPException(status_code=400, detail="invalid loan_months please enter an integer value <=360(30 years)")
 
 
 def calculate_emi(amount, term_months, interest):
@@ -60,13 +61,14 @@ def check_user_details(user_ids, owner_user_id):
     :return: boolean
     """
     from DataService.data_service import DataService
-    data_service = DataService(models.UserModel)
-    if not isinstance(owner_user_id, int):
-        return False
-    for id in user_ids:
-        if not isinstance(id, int):
-            return False
-        user_obj = data_service.get_user(id)
-        if not user_obj:
-            return False
-    return True
+    try:
+        data_service = DataService(models.UserModel)
+        if not isinstance(owner_user_id, int):
+            raise HTTPException(status_code=400, detail="invalid owner_user_id type")
+        for id in user_ids:
+            if not isinstance(id, int):
+                raise HTTPException(status_code=400, detail="invalid user_id type")
+            user_obj = data_service.get_user(id)
+        return True
+    except Exception as e:
+        raise e

@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 
 import models
 from DataService.data_service import DataService
-from database import SessionLocal
 from utils import check_loan_details, check_user_details
 
 router = APIRouter(prefix="/loans")
@@ -38,15 +37,10 @@ async def create_loan(request: Request):
 }
     """
 
-    error_message = "invalid payload"
     try:
         payload = await request.json()
         if not payload or not payload.get("loan_detail") or not payload.get("user_detail"):
-            return {
-                "message": error_message,
-                "data": {},
-                "status": 400
-            }
+            raise HTTPException(status_code=400, detail="invalid payload")
 
         loan_detail = payload.get("loan_detail")
         user_detail = payload.get("user_detail")
@@ -56,17 +50,16 @@ async def create_loan(request: Request):
         loan_months = loan_detail.get("months")
 
         if not loan_amount or not loan_interest or not loan_months:
-            raise Exception("missing loan details")
-        if not check_loan_details(loan_amount, loan_interest, loan_months):
-            raise Exception("invalid loan details")
+            raise HTTPException(status_code=400, detail="missing loan details")
+        check_loan_details(loan_amount, loan_interest, loan_months)
 
         user_ids = user_detail.get("user_ids")
         owner_user_id = user_detail.get("owner_user_id")
 
         if not user_ids or len(user_ids) == 0 or not owner_user_id:
-            raise Exception("missing user id details")
-        if not check_user_details(user_ids, owner_user_id):
-            raise Exception("invalid used detail")
+            raise HTTPException(status_code=400, detail="missing user id details")
+
+        check_user_details(user_ids, owner_user_id)
 
         loan_data_service = DataService(models.LoanModel)
         result = loan_data_service.create_loan(user_ids=user_ids, loan_amount=loan_amount, loan_interest=loan_interest,
@@ -74,7 +67,7 @@ async def create_loan(request: Request):
         return result
 
     except Exception as e:
-        return e
+        raise e
 
 
 @router.get("/{loan_id}")
@@ -111,18 +104,14 @@ async def get_loan(loan_id: int):
 }
     """
     if not loan_id:
-        return {
-            "message": "no loan id passed",
-            "data": {},
-            "status": 400
-        }
+        raise HTTPException(status_code=400, detail="no loan id passed")
     try:
 
         data_service = DataService(models.LoanModel)
         result = data_service.get_loan(loan_id)
         return result
     except Exception as e:
-        return {e}
+        raise e
 
 @router.post("/share")
 async def share_loan(request: Request):
@@ -150,7 +139,7 @@ async def share_loan(request: Request):
         return result
 
     except Exception as e:
-        return {e}
+        raise e
 
 @router.get("/schedule/{loan_id}")
 def get_loan_schedule(loan_id: int):
@@ -184,11 +173,8 @@ def get_loan_schedule(loan_id: int):
     }
     """
     if not loan_id:
-        return {
-            "message": "no loan id passed",
-            "data": {},
-            "status": 400
-        }
+        raise HTTPException(status_code=400, detail="no loan_id passed")
+
     try:
 
         data_service = DataService(models.LoanModel)
@@ -196,7 +182,7 @@ def get_loan_schedule(loan_id: int):
         return result
 
     except Exception as e:
-        return {e}
+        raise e
 
 @router.get("/summary/{loan_id}/month/{month_val}")
 def get_loan_summary(loan_id: int, month_val: int):
@@ -221,18 +207,11 @@ def get_loan_summary(loan_id: int, month_val: int):
             "status": 400
         }
     if month_val > 360:
-        return {
-            "message": "invalid month please send a month value <= 360",
-            "data": {},
-            "status": 400
-        }
-    db_session = SessionLocal()
+        raise HTTPException(status_code=400, detail="invalid month please send a month value <= 360")
     try:
         data_service = DataService(models.LoanModel)
         result = data_service.get_loan_summary(loan_id, month_val)
         return result
 
     except Exception as e:
-        return {e}
-    finally:
-        db_session.close()
+        raise e

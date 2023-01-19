@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 
 import models
 from DataService.data_service import DataService
@@ -17,7 +17,7 @@ async def get_all_users():
         result = data_service.get_all_users()
         return result
     except Exception as e:
-        return {e}
+        raise e
 
 @router.post("/")
 async def create_user(request: Request):
@@ -43,11 +43,7 @@ async def create_user(request: Request):
     """
     payload = await request.json()
     if not payload:
-        return {
-            "message": "invalid payload",
-            "data": {},
-            "status": 404
-        }
+        raise HTTPException(status_code=400, detail="invalid payload")
     try:
         email = payload.get("email")
         first_name = payload.get("first_name")
@@ -63,7 +59,7 @@ async def create_user(request: Request):
 
         return result
     except Exception as e:
-        return e
+        raise e
 @router.get("/{user_id}")
 async def get_user(user_id: int):
     """
@@ -72,18 +68,13 @@ async def get_user(user_id: int):
     :return: user object
     """
     if not user_id:
-        return {
-            "message": "no user id passed",
-            "data": {},
-            "status": 404
-        }
-
+        raise HTTPException(status_code=400, detail="no user id passed")
     try:
         data_service = DataService(models.UserModel)
         result = data_service.get_user(user_id=user_id)
         return result
     except Exception as e:
-        return {e}
+        raise e
 
 @router.get("/{user_id}/loans")
 def get_user_loans(user_id: int):
@@ -93,15 +84,11 @@ def get_user_loans(user_id: int):
     :return: array of loan objects associated to user
     """
     if not user_id:
-        return {
-            "message": "no user id passed",
-            "data": {},
-            "status": 400
-        }
+        raise HTTPException(status_code=400, detail="no user id passed")
     try:
         data_service = DataService(models.UserModel)
         result = data_service.get_user_loans(user_id)
         return result
     except Exception as e:
-        return {e}
+        raise e
 
